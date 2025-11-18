@@ -50,7 +50,7 @@ function LocationInput({ seed, setSeed, xOffset, setXOffset, yOffset, setYOffset
       </div>
       <div>
         <label>Size:</label>
-        <input type="number" value={size} onChange={(e) => setSize(parseInt(e.target.value) || 32)} min="1" />
+        <input type="number" value={size} onChange={(e) => setSize(Math.min(Math.max(parseInt(e.target.value) || 32, 1), 128))} min="1" max="128" />      
       </div>
     </div>
   );

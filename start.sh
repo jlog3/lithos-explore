@@ -8,6 +8,10 @@ fi
 
 ENV_NAME="lithos_explore"
 
+# Source Conda activation script (adjust path if your Conda install is elsewhere)
+CONDA_BASE=$(conda info --base)
+source "$CONDA_BASE/etc/profile.d/conda.sh"
+
 # Create env if it doesn't exist
 if ! conda env list | grep -q "^$ENV_NAME "; then
     echo "Creating Conda env '$ENV_NAME' from environment.yaml..."
@@ -18,6 +22,11 @@ fi
 echo "Activating Conda env '$ENV_NAME'..."
 conda activate $ENV_NAME
 
+# Kill any processes on ports 5000 and 3000 (using fuser for reliability)
+echo "Terminating any existing processes on ports 5000 and 3000..."
+sudo fuser -k 5000/tcp 2>/dev/null || true
+sudo fuser -k 3000/tcp 2>/dev/null || true
+
 # Start backend in background
 echo "Starting Flask backend..."
 cd backend
@@ -26,11 +35,11 @@ python app.py &
 BACKEND_PID=$!
 cd ..
 
-# Start frontend
+# Start frontend (auto-answer 'y' to port prompt)
 echo "Starting React frontend..."
 cd frontend
 npm install
-npm start &
+yes y | npm start &
 FRONTEND_PID=$!
 cd ..
 
