@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-
-function LocationInput({ seed, setSeed, xOffset, setXOffset, yOffset, setYOffset, zOffset, setZOffset, size, setSize }) {
+function LocationInput({ seed, setSeed, xOffset, setXOffset, yOffset, setYOffset, zOffset, setZOffset, size, setSize, probOffsets, setProbOffsets, crustType, setCrustType, chunkX, setChunkX, chunkY, setChunkY, chunkZ, setChunkZ }) {
   const [location, setLocation] = useState('');
-
   const handleLocationSubmit = async (e) => {
     e.preventDefault();
     if (!location) return;
@@ -13,6 +11,9 @@ function LocationInput({ seed, setSeed, xOffset, setXOffset, yOffset, setYOffset
         setXOffset(data.x_offset);
         setYOffset(data.y_offset);
         setZOffset(data.z_offset);
+        // New
+        setCrustType(data.crust_type);
+        setProbOffsets(data.prob_offsets);
       } else {
         console.error('Error fetching offsets');
       }
@@ -20,17 +21,25 @@ function LocationInput({ seed, setSeed, xOffset, setXOffset, yOffset, setYOffset
       console.error('Fetch error:', error);
     }
   };
-
   return (
     <div className="location-input">
       <form onSubmit={handleLocationSubmit}>
-        <input 
-          type="text" 
-          value={location} 
-          onChange={(e) => setLocation(e.target.value)} 
-          placeholder="Enter location (e.g., Paris)" 
+        <input
+          type="text"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          placeholder="Enter location (e.g., Paris)"
         />
         <button type="submit">Go to Location</button>
+        <button onClick={() => setZOffset(Math.max(0, zOffset - 10))}>Ascend (-10)</button>
+        <button onClick={() => setZOffset(zOffset + 10)}>Dig Deeper (+10)</button>
+        {/* For chunked expansion */}
+        <button onClick={() => setChunkX(chunkX + 1)}>Expand X (+)</button>
+        <button onClick={() => setChunkX(chunkX - 1)}>Expand X (-)</button>
+        <button onClick={() => setChunkY(chunkY + 1)}>Expand Y (+)</button>
+        <button onClick={() => setChunkY(chunkY - 1)}>Expand Y (-)</button>
+        <button onClick={() => setChunkZ(chunkZ + 1)}>Expand Z (+)</button>
+        <button onClick={() => setChunkZ(chunkZ - 1)}>Expand Z (-)</button>
       </form>
       <div>
         <label>Seed:</label>
@@ -50,10 +59,10 @@ function LocationInput({ seed, setSeed, xOffset, setXOffset, yOffset, setYOffset
       </div>
       <div>
         <label>Size:</label>
-        <input type="number" value={size} onChange={(e) => setSize(Math.min(Math.max(parseInt(e.target.value) || 32, 1), 128))} min="1" max="128" />      
+        <input type="number" value={size} onChange={(e) => setSize(Math.min(Math.max(parseInt(e.target.value) || 32, 1), 128))} min="1" max="128" />
       </div>
+      <p>Crust Type: {crustType}</p>
     </div>
   );
 }
-
 export default LocationInput;

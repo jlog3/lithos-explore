@@ -1,7 +1,7 @@
 # Lithos Explorer
 Web app for exploring geologically representative 3D rock formations using real-world data.
 
-##Overview
+## Overview
 This project integrates real geologic data from APIs to generate 3D rock chunks that approximate actual compositions for user-entered locations. It geocodes locations, fetches stratigraphic and lithologic data (e.g., via Macrostrat API), and adjusts procedural generation accordingly—mapping real rock types to minerals, probabilities, and layers. It's educational, focusing on real geology while retaining some procedural elements for visualization.
 Stack:
 - Backend: Python 3.10 with Flask for API, requests for external APIs, hashlib for offsets, NumPy for array ops.
