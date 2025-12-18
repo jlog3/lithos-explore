@@ -1,21 +1,8 @@
-//### Changes Needed in Explorer3D.js
-//To integrate debugging for the `/api/chunk3d` endpoint (as suggested earlier), we need to:
-//- Add a new state for `chunkDebugData` to store the debug info from the API.
-//- Append `&debug=true` to the fetch URL in `fetchChunk` to request debug data.
-//- After fetching and setting the chunk, also set `chunkDebugData` from `data.debug_info`.
-//- In the return JSX, add a new debug display section (similar to LocationInput.js) below the canvas, with a `<pre>` for JSON and a download button.
-//- Move `downloadJSON` outside the return (as a function, like in LocationInput).
-//- Ensure the display is conditional on `chunkDebugData` existing.
-
-//This assumes the backend `/api/chunk3d` is updated to return `'debug_info'` when `debug=true` (as per the earlier backend suggestion).
-
-//Here's the full updated `frontend/src/components/Explorer3D.js` with these changes:
-
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Box, Instances, Instance, Text } from '@react-three/drei'; // Removed axesHelper if not used
-
+import { TrackballControls } from '@react-three/drei';
 function Voxels({ chunk, size, mined, mineralColors, mineralData }) {
   if (!chunk || chunk.length === 0 || !mineralData) return null;
   const textures = useMemo(() => {
@@ -24,8 +11,9 @@ function Voxels({ chunk, size, mined, mineralColors, mineralData }) {
     const loadTexture = (path, errorMsg) => {
       if (!path) return null;
       const tex = loader.load(path, undefined, undefined, () => console.error(errorMsg));
-      tex.repeat.set(1, 1);
+      tex.repeat.set(0.5, 0.5); // Full image over 2x2
       tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.magFilter = THREE.LinearFilter; // Smoother for partials
       tex.colorSpace = THREE.SRGBColorSpace;
       return tex;
     };
@@ -45,7 +33,7 @@ function Voxels({ chunk, size, mined, mineralColors, mineralData }) {
     const loadEmissive = (path, errorMsg) => {
       if (!path) return null;
       const tex = loader.load(path, undefined, undefined, () => console.error(errorMsg));
-      tex.repeat.set(1, 1);
+      tex.repeat.set(0.5, 0.5); // Changed: Span over 2x2
       tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
       tex.colorSpace = THREE.LinearSRGBColorSpace;
       return tex;
@@ -56,7 +44,7 @@ function Voxels({ chunk, size, mined, mineralColors, mineralData }) {
     });
     mineralData.coverVariants.forEach((v) => {
       const key = `cover_${v.id}`;
-      result[key] = loadEmissive(v.emissiveMap, `${v.id} emissive failed`); // Assume emissiveMap added to JSON if needed
+      result[key] = loadEmissive(v.emissiveMap, `${v.id} emissive failed`);
     });
     return result;
   }, [mineralData]);
@@ -66,7 +54,7 @@ function Voxels({ chunk, size, mined, mineralColors, mineralData }) {
     const loadNormal = (path, errorMsg) => {
       if (!path) return null;
       const tex = loader.load(path, undefined, undefined, () => console.error(errorMsg));
-      tex.repeat.set(1, 1);
+      tex.repeat.set(0.5, 0.5); // Changed: Span over 2x2
       tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
       tex.colorSpace = THREE.LinearSRGBColorSpace;
       return tex;
@@ -77,7 +65,7 @@ function Voxels({ chunk, size, mined, mineralColors, mineralData }) {
     });
     mineralData.coverVariants.forEach((v) => {
       const key = `cover_${v.id}`;
-      result[key] = loadNormal(v.normalMap, `${v.id} normal failed`); // Assume normalMap added to JSON if needed
+      result[key] = loadNormal(v.normalMap, `${v.id} normal failed`);
     });
     return result;
   }, [mineralData]);
@@ -87,9 +75,10 @@ function Voxels({ chunk, size, mined, mineralColors, mineralData }) {
     const loadRoughness = (path, errorMsg) => {
       if (!path) return null;
       const tex = loader.load(path, undefined, undefined, () => console.error(errorMsg));
-      tex.repeat.set(1, 1);
+      tex.repeat.set(0.5, 0.5); // Full image over 2x2
       tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      tex.colorSpace = THREE.LinearSRGBColorSpace;
+      tex.magFilter = THREE.LinearFilter; // Smoother for partials
+      tex.colorSpace = THREE.SRGBColorSpace;
       return tex;
     };
     const result = {};
@@ -98,7 +87,7 @@ function Voxels({ chunk, size, mined, mineralColors, mineralData }) {
     });
     mineralData.coverVariants.forEach((v) => {
       const key = `cover_${v.id}`;
-      result[key] = loadRoughness(v.roughnessMap, `${v.id} roughness failed`); // Assume roughnessMap added to JSON if needed
+      result[key] = loadRoughness(v.roughnessMap, `${v.id} roughness failed`);
     });
     return result;
   }, [mineralData]);
@@ -129,7 +118,7 @@ function Voxels({ chunk, size, mined, mineralColors, mineralData }) {
       {Object.entries(minerals).map(([type, positions]) => (
         positions.length > 0 && (
           <Instances key={type} limit={positions.length}>
-            <boxGeometry args={[1.1, 1.1, 1.1]} />
+            <boxGeometry args={[1, 1, 1]} />
             <meshStandardMaterial
               map={textures[type] || null}
               normalMap={normalMaps[type] || null}
@@ -159,7 +148,6 @@ function Voxels({ chunk, size, mined, mineralColors, mineralData }) {
     </group>
   );
 }
-
 function SetupRefs({ cameraRef, controlsRef }) {
   const { camera } = useThree();
   useEffect(() => {
@@ -167,9 +155,12 @@ function SetupRefs({ cameraRef, controlsRef }) {
       cameraRef.current = camera;
     }
   }, [camera, cameraRef]);
-  return <OrbitControls ref={controlsRef} />;
+  return <TrackballControls ref={controlsRef} />;
+  //return <OrbitControls ref={controlsRef} enableDamping={false} />;
+  //return <OrbitControls ref={controlsRef} enableDamping={true} />;
+  //return <OrbitControls ref={controlsRef} enableDamping={false} rotateSpeed={1} />; // Inverted horizontal rotation
+  //return <OrbitControls ref={controlsRef} enableDamping={false} rotateSpeed={-1} />; // Inverted horizontal rotation
 }
-
 async function getMineralType(seed, x, y, z, probOffsets = {}, allowedMinerals = null, depthLayers) {
   const inputStr = `${seed}:${x}:${y}:${z}`;
   const encoder = new TextEncoder();
@@ -212,8 +203,7 @@ async function getMineralType(seed, x, y, z, probOffsets = {}, allowedMinerals =
   }
   return cumList[cumList.length - 1][1];
 }
-
-function Explorer3D({ seed, xOffset, yOffset, zOffset, size, probOffsets, chunkX = 0, chunkY = 0, chunkZ = 0, testMode, selectedMinerals, mineralColors, crustType }) {
+function Explorer3D({ seed, xOffset, yOffset, zOffset, size, probOffsets, chunkX = 0, chunkY = 0, chunkZ = 0, testMode, selectedMinerals, mineralColors, crustType, setChunkDebugData, coverVariant }) {
   const [mineralData, setMineralData] = useState(null);
   useEffect(() => {
     const fetchData = async () => {
@@ -247,7 +237,6 @@ function Explorer3D({ seed, xOffset, yOffset, zOffset, size, probOffsets, chunkX
     });
   }, [mineralData]);
   const [chunk, setChunk] = useState([]);
-  const [chunkDebugData, setChunkDebugData] = useState(null); // New state for chunk debug
   const [mined, setMined] = useState(() => {
     const stored = localStorage.getItem('mined');
     if (stored) return JSON.parse(stored);
@@ -262,6 +251,7 @@ function Explorer3D({ seed, xOffset, yOffset, zOffset, size, probOffsets, chunkX
     localStorage.removeItem('mined');
   }, [seed, xOffset, yOffset, zOffset, size, probOffsets, chunkX, chunkY, chunkZ, testMode, selectedMinerals]);
   useEffect(() => {
+    if (!mineralData) return;  // Added: Guard against race condition
     const fetchChunk = async () => {
       const params = new URLSearchParams({
         seed,
@@ -282,22 +272,19 @@ function Explorer3D({ seed, xOffset, yOffset, zOffset, size, probOffsets, chunkX
         const response = await fetch(`/api/chunk3d?${params.toString()}`);
         if (response.ok) {
           const data = await response.json();
-          setChunk(data.chunk || data); // Adjust if chunk is direct
+          const chunkData = data.chunk || data; // Handle chunk properly
+          setChunk(chunkData);
           setChunkDebugData(data.debug_info || null); // Set debug data
           console.log("Model generated successfully. Chunk data:", data);
           const stored = localStorage.getItem('mined');
           if (stored) {
             setMined(JSON.parse(stored));
           } else {
-            const newMined = await initializeMined(chunk, size, seed, xOffset, yOffset, zOffset, probOffsets, crustType, testMode ? selectedMinerals : null, depthLayers);
+            const newMined = await initializeMined(chunkData, size, seed, xOffset, yOffset, zOffset, probOffsets, crustType, testMode ? selectedMinerals : null, depthLayers);
             setMined(newMined);
             localStorage.setItem('mined', JSON.stringify(newMined));
           }
-          const unique = new Set();
-          data.forEach(plane => plane.forEach(row => row.forEach(mineral => {
-            if (mineral !== 'void') unique.add(mineral);
-          })));
-          setUsedMinerals(Array.from(unique).sort());
+          // Initial unique minerals from chunk (moved to separate useEffect for full scan)
         } else {
           console.error('Error fetching chunk');
         }
@@ -306,33 +293,43 @@ function Explorer3D({ seed, xOffset, yOffset, zOffset, size, probOffsets, chunkX
       }
     };
     fetchChunk();
-  }, [seed, xOffset, yOffset, zOffset, size, probOffsets, chunkX, chunkY, chunkZ, testMode, selectedMinerals, depthLayers, crustType]);
+  }, [seed, xOffset, yOffset, zOffset, size, probOffsets, chunkX, chunkY, chunkZ, testMode, selectedMinerals, depthLayers, crustType, mineralData, setChunkDebugData]);
+  // New useEffect for computing usedMinerals including covers from mined
+  useEffect(() => {
+    if (chunk.length > 0 && mined.length > 0) {
+      const allUnique = new Set();
+      chunk.forEach((plane, x) => {
+        plane.forEach((row, y) => {
+          row.forEach((mineral, z) => {
+            if (mineral !== 'void') allUnique.add(mineral);
+            const minedVal = mined[x][y][z];
+            if (minedVal && minedVal.startsWith('cover_')) allUnique.add(minedVal);
+          });
+        });
+      });
+      setUsedMinerals(Array.from(allUnique).sort());
+    }
+  }, [chunk, mined]);
   const initializeMined = async (chunk, size, seed, xOffset, yOffset, zOffset, probOffsets, crustType, allowedMinerals, depthLayers) => {
     const newMined = Array.from({ length: size }, () => Array.from({ length: size }, () => Array(size).fill(null)));
-    // Select cover variant based on location (crustType)
-    let coverId = 'clayey_mudflat'; // Default (continental/volcanic land)
-    if (crustType === 'oceanic' || crustType === 'volcanic_subduction') {
-      coverId = 'coral_reef_sand'; // Water/volcanic-related
+    let coverId;
+    if (coverVariant) {
+      coverId = coverVariant;
+    } else {
+      if (!mineralData || !mineralData.coverVariants) {  // Added: Extra safeguard (though race fix should prevent)
+        console.error('mineralData not ready for covers; using default');
+        coverId = 'clayey_mudflat';  // Fallback to your default from minerals.json
+      } else {
+        const variants = mineralData.coverVariants.map(v => v.id);
+        const randomIndex = Math.floor(Math.random() * variants.length);
+        coverId = variants[randomIndex];
+      }
     }
     for (let lx = 0; lx < size; lx++) {
       for (let ly = 0; ly < size; ly++) {
-        let found = false;
-        let gz = 0;
-        while (!found && gz < zOffset + size) {
-          const gx = lx + xOffset;
-          const gy = ly + yOffset;
-          const mineral = await getMineralType(seed, gx, gy, gz, probOffsets, allowedMinerals, depthLayers);
-          if (mineral !== 'void') {
-            found = true;
-            if (gz >= zOffset) {
-              const lz = gz - zOffset;
-              newMined[lx][ly][lz] = `cover_${coverId}`;
-            }
-          }
-          gz++;
-        }
+        newMined[lx][ly][0] = `cover_${coverId}`;
       }
-    };
+    }
     return newMined;
   };
   useEffect(() => {
@@ -386,15 +383,6 @@ function Explorer3D({ seed, xOffset, yOffset, zOffset, size, probOffsets, chunkX
       controlsRef.current.update();
     }
   };
-  const downloadJSON = (data, filename) => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
   if (!mineralData) return <div>Loading mineral data...</div>;
   return (
     <div className="explorer-3d" style={{ position: 'relative' }}>
@@ -423,7 +411,10 @@ function Explorer3D({ seed, xOffset, yOffset, zOffset, size, probOffsets, chunkX
       <div style={{ position: 'absolute', bottom: 10, left: 10, background: 'rgba(255,255,255,0.8)', padding: 10, borderRadius: 5 }}>
         <h4>Mineral Key</h4>
         {usedMinerals.map(mineral => {
-          const texturePath = mineralData.minerals[mineral]?.texture;
+          const isCover = mineral.startsWith('cover_');
+          const texturePath = isCover
+            ? mineralData.coverVariants.find(v => v.id === mineral.slice(6))?.texture
+            : mineralData.minerals[mineral]?.texture;
           return (
             <div key={mineral} style={{ display: 'flex', alignItems: 'center', marginBottom: 5 }}>
               {texturePath ? (
@@ -451,17 +442,7 @@ function Explorer3D({ seed, xOffset, yOffset, zOffset, size, probOffsets, chunkX
           <button onClick={() => snapToAxis('z', false)}>-Z</button>
         </div>
       </div>
-      {chunkDebugData && (
-        <div style={{ marginTop: '20px', border: '1px solid #ccc', padding: '10px' }}>
-          <h3>Chunk Debug Data</h3>
-          <pre>{JSON.stringify(chunkDebugData, null, 2)}</pre>
-          <button onClick={() => downloadJSON(chunkDebugData, 'chunk_debug_data.json')}>
-            Download Chunk Debug JSON
-          </button>
-        </div>
-      )}
     </div>
   );
 }
-
 export default Explorer3D;

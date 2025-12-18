@@ -5044,7 +5044,17 @@
             ],
             "texture": "/textures/cover_variants/clayey_mudflat/clayey_mudflat1.jpg",
             "roughness": 0.9,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "elevation_max": 100,
+                "natural": [
+                    "wetland",
+                    "mudflat"
+                ],
+                "landuse": [
+                    "wetland"
+                ]
+            }
         },
         {
             "id": "coral_reef_sand",
@@ -5056,7 +5066,19 @@
             ],
             "texture": "/textures/cover_variants/coral_reef_sand/coral_reef_sand1.jpg",
             "roughness": 0.8,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "elevation_max": 0,
+                "requires_tropical": true,
+                "natural": [
+                    "water",
+                    "reef",
+                    "ocean"
+                ],
+                "crust_types": [
+                    "oceanic"
+                ]
+            }
         },
         {
             "id": "desert_dune",
@@ -5068,7 +5090,15 @@
             ],
             "texture": "/textures/cover_variants/desert_dune/desert_dune1.jpg",
             "roughness": 0.8,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "natural": [
+                    "desert"
+                ],
+                "landuse": [
+                    "desert"
+                ]
+            }
         },
         {
             "id": "forest_leaf",
@@ -5080,7 +5110,17 @@
             ],
             "texture": "/textures/cover_variants/forest_leaf/forest_leaf1.jpg",
             "roughness": 0.95,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "natural": [
+                    "wood",
+                    "forest"
+                ],
+                "landuse": [
+                    "forest",
+                    "wood"
+                ]
+            }
         },
         {
             "id": "glacial_ice",
@@ -5092,7 +5132,14 @@
             ],
             "texture": "/textures/cover_variants/glacial_ice/glacial_ice1.jpg",
             "roughness": 0.2,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "requires_cold": true,
+                "natural": [
+                    "glacier",
+                    "ice"
+                ]
+            }
         },
         {
             "id": "grassland_sod",
@@ -5104,7 +5151,17 @@
             ],
             "texture": "/textures/cover_variants/grassland_sod/grassland_sod1.jpg",
             "roughness": 0.85,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "natural": [
+                    "grassland",
+                    "meadow"
+                ],
+                "landuse": [
+                    "grass",
+                    "meadow"
+                ]
+            }
         },
         {
             "id": "laterite_soil",
@@ -5116,7 +5173,13 @@
             ],
             "texture": "/textures/cover_variants/laterite_soil/laterite_soil1.jpg",
             "roughness": 0.9,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "requires_tropical": true,
+                "natural": [
+                    "soil"
+                ]
+            }
         },
         {
             "id": "limestone_pavement",
@@ -5128,7 +5191,13 @@
             ],
             "texture": "/textures/cover_variants/limestone_pavement/limestone_pavement1.jpg",
             "roughness": 0.6,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "natural": [
+                    "bare_rock",
+                    "limestone"
+                ]
+            }
         },
         {
             "id": "loamy_soil",
@@ -5140,7 +5209,16 @@
             ],
             "texture": "/textures/cover_variants/loamy_soil/loamy_soil1.jpg",
             "roughness": 0.85,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "landuse": [
+                    "farmland",
+                    "agriculture"
+                ],
+                "natural": [
+                    "soil"
+                ]
+            }
         },
         {
             "id": "metamorphic_gneiss",
@@ -5152,7 +5230,13 @@
             ],
             "texture": "/textures/cover_variants/metamorphic_gneiss/metamorphic_gneiss1.jpg",
             "roughness": 0.5,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "natural": [
+                    "rock",
+                    "gneiss"
+                ]
+            }
         },
         {
             "id": "peat_bog",
@@ -5164,7 +5248,13 @@
             ],
             "texture": "/textures/cover_variants/peat_bog/peat_bog1.jpg",
             "roughness": 0.95,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "natural": [
+                    "wetland",
+                    "bog"
+                ]
+            }
         },
         {
             "id": "riverbed_gravel",
@@ -5176,7 +5266,14 @@
             ],
             "texture": "/textures/cover_variants/riverbed_gravel/riverbed_gravel1.jpg",
             "roughness": 0.7,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "natural": [
+                    "river",
+                    "watercourse",
+                    "gravel"
+                ]
+            }
         },
         {
             "id": "saltflat_crust",
@@ -5188,7 +5285,13 @@
             ],
             "texture": "/textures/cover_variants/saltflat_crust/saltflat_crust1.jpg",
             "roughness": 0.6,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "natural": [
+                    "salt_flat",
+                    "salt_pan"
+                ]
+            }
         },
         {
             "id": "sandstone_outcrop",
@@ -5200,7 +5303,13 @@
             ],
             "texture": "/textures/cover_variants/sandstone_outcrop/sandstone_outcrop1.jpg",
             "roughness": 0.6,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "natural": [
+                    "rock",
+                    "sandstone"
+                ]
+            }
         },
         {
             "id": "sandy_beach",
@@ -5212,7 +5321,13 @@
             ],
             "texture": "/textures/cover_variants/sandy_beach/sandy_beach1.jpg",
             "roughness": 0.8,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "natural": [
+                    "beach",
+                    "sand"
+                ]
+            }
         },
         {
             "id": "shale_rock",
@@ -5224,7 +5339,13 @@
             ],
             "texture": "/textures/cover_variants/shale_rock/shale_rock1.jpg",
             "roughness": 0.5,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "natural": [
+                    "rock",
+                    "shale"
+                ]
+            }
         },
         {
             "id": "snowcovered_ground",
@@ -5236,7 +5357,13 @@
             ],
             "texture": "/textures/cover_variants/snowcovered_ground/snowcovered_ground1.jpg",
             "roughness": 0.4,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "requires_cold": true,
+                "natural": [
+                    "snow"
+                ]
+            }
         },
         {
             "id": "tundra_permafrost",
@@ -5248,7 +5375,13 @@
             ],
             "texture": "/textures/cover_variants/tundra_permafrost/tundra_permafrost1.jpg",
             "roughness": 0.75,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "requires_cold": true,
+                "natural": [
+                    "tundra"
+                ]
+            }
         },
         {
             "id": "volcanic_glass",
@@ -5260,7 +5393,16 @@
             ],
             "texture": "/textures/cover_variants/volcanic_glass/volcanic_glass1.jpg",
             "roughness": 0.1,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "natural": [
+                    "volcano"
+                ],
+                "crust_types": [
+                    "volcanic",
+                    "volcanic_subduction"
+                ]
+            }
         },
         {
             "id": "volcanic lava",
@@ -5272,7 +5414,17 @@
             ],
             "texture": "/textures/cover_variants/volcanic lava/volcanic lava1.jpg",
             "roughness": 0.4,
-            "metalness": 0.0
+            "metalness": 0.0,
+            "conditions": {
+                "natural": [
+                    "volcano",
+                    "lava"
+                ],
+                "crust_types": [
+                    "volcanic",
+                    "volcanic_subduction"
+                ]
+            }
         }
     ]
 }

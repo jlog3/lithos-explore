@@ -11,13 +11,16 @@ function App() {
   const [size, setSize] = useState(32);
   const [currentDepth, setCurrentDepth] = useState(0);
   const [probOffsets, setProbOffsets] = useState({});
-  const [crustType, setCrustType] = useState('');
+  const [coverVariant, setCoverVariant] = useState(null);
+  const [crustType, setCrustType] = useState('continental'); // Default to continental for initial covers
   const [chunkX, setChunkX] = useState(0);
   const [chunkY, setChunkY] = useState(0);
   const [chunkZ, setChunkZ] = useState(0);
   const [testMode, setTestMode] = useState(false);
   const [selectedMinerals, setSelectedMinerals] = useState([]);
   const [mineralColors, setMineralColors] = useState({});
+  const [debugData, setDebugData] = useState(null);
+  const [chunkDebugData, setChunkDebugData] = useState(null);
   useEffect(() => {
     const fetchMinerals = async () => {
       try {
@@ -42,11 +45,20 @@ function App() {
     };
     fetchMinerals();
   }, []);
+  const downloadJSON = (data, filename) => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   // Pass to LocationInput and Explorer3D as zOffset = currentDepth
   return (
     <div className="app">
       <header>
-        <h1>LithosCipher Explorer</h1>
+        <h1>Lithos Explorer</h1>
       </header>
       <LocationInput
         seed={seed} setSeed={setSeed}
@@ -62,6 +74,8 @@ function App() {
         testMode={testMode} setTestMode={setTestMode}
         selectedMinerals={selectedMinerals} setSelectedMinerals={setSelectedMinerals}
         mineralColors={mineralColors}
+        setDebugData={setDebugData}
+        setCoverVariant={setCoverVariant}  // Added this
       />
       <Explorer3D
         seed={seed}
@@ -76,8 +90,36 @@ function App() {
         testMode={testMode}
         selectedMinerals={selectedMinerals}
         mineralColors={mineralColors}
-        crustType={crustType}  // Added for location-based cover variants
+        crustType={crustType} // Added for location-based cover variants
+        setChunkDebugData={setChunkDebugData}
+        coverVariant={coverVariant}  // Added this
       />
+      {debugData && (
+        <div style={{ marginTop: '20px', border: '1px solid #ccc', padding: '10px' }}>
+          <h3>Debug Data</h3>
+          <pre>{JSON.stringify(debugData, null, 2)}</pre>
+          <button onClick={() => downloadJSON(debugData, 'debug_data.json')}>
+            Download Debug JSON
+          </button>
+        </div>
+      )}
+      {chunkDebugData && (
+        <div style={{ marginTop: '20px', border: '1px solid #ccc', padding: '10px' }}>
+          <h3>Chunk Debug Data</h3>
+          <p>This section details the variables used in the model building process:</p>
+          <ul>
+            <li><strong>seed</strong>: The base seed string used for procedural generation, ensuring consistent results for the same inputs.</li>
+            <li><strong>offsets</strong>: The x, y, z offsets derived from the location hash, positioning the chunk in the virtual world.</li>
+            <li><strong>prob_offsets</strong>: Probability adjustments applied to minerals based on geological data, elevation, plate type, and deposits.</li>
+            <li><strong>allowed_minerals</strong>: A list of restricted minerals (if in test mode), limiting generation to selected types.</li>
+            <li><strong>use_vein_bias</strong>: A boolean indicating whether iterative vein biasing was applied to simulate mineral clustering.</li>
+          </ul>
+          <pre>{JSON.stringify(chunkDebugData, null, 2)}</pre>
+          <button onClick={() => downloadJSON(chunkDebugData, 'chunk_debug_data.json')}>
+            Download Chunk Debug JSON
+          </button>
+        </div>
+      )}
       <EducationPanel />
     </div>
   );

@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import MapSelector from './MapSelector'; // Import the map
-
-function LocationInput({ seed, setSeed, xOffset, setXOffset, yOffset, setYOffset, zOffset, setZOffset, size, setSize, probOffsets, setProbOffsets, crustType, setCrustType, chunkX, setChunkX, chunkY, setChunkY, chunkZ, setChunkZ, testMode, setTestMode, selectedMinerals, setSelectedMinerals, mineralColors }) {
+function LocationInput({ seed, setSeed, xOffset, setXOffset, yOffset, setYOffset, zOffset, setZOffset, size, setSize, probOffsets, setProbOffsets, crustType, setCrustType, chunkX, setChunkX, chunkY, setChunkY, chunkZ, setChunkZ, testMode, setTestMode, selectedMinerals, setSelectedMinerals, mineralColors, setDebugData, setCoverVariant }) {  // Added setCoverVariant here
   const [location, setLocation] = useState('');
   const [message, setMessage] = useState('');
-  const [debugData, setDebugData] = useState(null);
-
   const handleLocationSubmit = async (e) => {
     if (e) e.preventDefault(); // Allow programmatic calls without event
     if (!location) return;
@@ -15,9 +12,10 @@ function LocationInput({ seed, setSeed, xOffset, setXOffset, yOffset, setYOffset
         const data = await response.json();
         setXOffset(data.x_offset);
         setYOffset(data.y_offset);
-        setZOffset(data.z_offset);
+        //setZOffset(data.z_offset);
         setCrustType(data.crust_type);
         setProbOffsets(data.prob_offsets);
+        setCoverVariant(data.cover_variant);
         const boosts = Object.keys(data.prob_offsets).length ? JSON.stringify(data.prob_offsets) : 'None';
         setMessage(`Success: Fetched offsets for ${location}. Crust: ${data.crust_type}. Boosts applied: ${boosts}`);
         setDebugData(data.debug_info || null);
@@ -31,30 +29,17 @@ function LocationInput({ seed, setSeed, xOffset, setXOffset, yOffset, setYOffset
       console.error("Failure: Fetch error", error);
     }
   };
-
   // Handler for map clicks
   const handleMapClick = (lat, lon) => {
     const newLocation = `${lat},${lon}`;
     setLocation(newLocation);
     handleLocationSubmit(); // Auto-submit to fetch offsets immediately
   };
-
   const toggleMineral = (mineral) => {
     setSelectedMinerals(prev =>
       prev.includes(mineral) ? prev.filter(m => m !== mineral) : [...prev, mineral]
     );
   };
-
-  const downloadJSON = (data, filename) => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="location-input">
       {/* Add the map */}
@@ -68,6 +53,7 @@ function LocationInput({ seed, setSeed, xOffset, setXOffset, yOffset, setYOffset
           placeholder="Enter location (e.g., Paris or 37.7749,-122.4194)"
         />
         <button type="submit">Go to Location</button>
+        <button onClick={() => setZOffset(0)}>View Surface (Z=0)</button>
         <button onClick={() => setZOffset(Math.max(0, zOffset - 10))}>Ascend (-10)</button>
         <button onClick={() => setZOffset(zOffset + 10)}>Dig Deeper (+10)</button>
         <button onClick={() => setChunkX(chunkX + 1)}>Expand X (+)</button>
@@ -123,19 +109,9 @@ function LocationInput({ seed, setSeed, xOffset, setXOffset, yOffset, setYOffset
             ))}
         </div>
       )}
-      {debugData && (
-        <div style={{ marginTop: '20px', border: '1px solid #ccc', padding: '10px' }}>
-          <h3>Debug Data for {debugData.location}</h3>
-          <pre>{JSON.stringify(debugData, null, 2)}</pre>
-          <button onClick={() => downloadJSON(debugData, 'debug_data.json')}>
-            Download Debug JSON
-          </button>
-        </div>
-      )}
       <p>Crust Type: {crustType}</p>
       <p style={{ color: message.startsWith('Success') ? 'green' : 'red' }}>{message}</p>
     </div>
   );
 }
-
 export default LocationInput;

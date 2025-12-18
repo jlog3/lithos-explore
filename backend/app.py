@@ -288,6 +288,7 @@ def generate_slice(seed, size, z_offset=0, x_offset=0, y_offset=0, zoom=1, prob_
         padded[:grid.shape[0], :grid.shape[1]] = grid
         grid = padded
     return grid
+    
 def get_offsets_from_location(location: str):
     hash_obj = hashlib.sha256(location.encode())
     hash_bytes = hash_obj.digest()
@@ -300,21 +301,24 @@ def get_offsets_from_location(location: str):
     lat, lon = None, None
     minerals_counter = Counter()
     plate = None
-
     # Build debug_info incrementally to avoid reference errors
     debug_info = {'location': location}
-
     use_mindat = False  # Toggle: Set to True to use Mindat API instead of MRDS for testing
-
     MINDAT_API_KEY = ""  # Set your Mindat API key here if using Mindat
-
     try:
+        data = None  # Initialize data for geocoding
         # Geocoding
         if ',' in location.strip():
             parts = [p.strip() for p in location.split(',')]
             lat, lon = float(parts[0]), float(parts[1])
+            # Perform reverse geocoding to get details for lat,lon inputs
+            url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json&limit=1&extratags=1"
+            resp = requests.get(url, headers=HEADERS, timeout=10)
+            if resp.ok and resp.json():
+                debug_info['geocoding_response'] = resp.json()
+                data = resp.json()  # Reverse returns a single dict
         else:
-            url = f"https://nominatim.openstreetmap.org/search?q={location}&format=json&limit=1"
+            url = f"https://nominatim.openstreetmap.org/search?q={location}&format=json&limit=1&extratags=1"
             resp = requests.get(url, headers=HEADERS, timeout=10)
             if resp.ok and resp.json():
                 debug_info['geocoding_response'] = resp.json()
@@ -324,16 +328,18 @@ def get_offsets_from_location(location: str):
         debug_info['lon'] = lon
         if lat is None or lon is None:
             raise ValueError("Geocoding failed")
-
         # Elevation (fixed URL: use comma for single location)
-        elev_resp = requests.get(
-            f"https://api.open-elevation.com/api/v1/lookup?locations={lat},{lon}",
-            timeout=10
-        )
-        if elev_resp.ok and elev_resp.json().get('results'):
-            debug_info['elevation_response'] = elev_resp.json()
-            elevation = elev_resp.json()['results'][0]['elevation']
-        debug_info['elevation'] = elevation  # Update after assignment
+        try:  # Smaller try for elevation
+            elev_resp = requests.get(
+                f"https://api.open-elevation.com/api/v1/lookup?locations={lat},{lon}",
+                timeout=10
+            )
+            if elev_resp.ok and elev_resp.json().get('results'):
+                debug_info['elevation_response'] = elev_resp.json()
+                elevation = elev_resp.json()['results'][0]['elevation']
+        except Exception as e:
+            print(f"Elevation fetch error: {e}")
+        debug_info['elevation'] = elevation  # Always add, even if default 0
         if elevation > 3000:
             prob_offsets['void'] = prob_offsets.get('void', 0) + 0.1
             prob_offsets['mica'] = prob_offsets.get('mica', 0) + 0.08
@@ -345,10 +351,13 @@ def get_offsets_from_location(location: str):
             crust_type = "oceanic"
             prob_offsets['basalt'] = 0.35
             prob_offsets['pyroxene'] = 0.25
-
         # Tectonic Plate
-        plate = get_plate_type(lat, lon)
-        debug_info['plate_type'] = plate  # After assignment
+        try:  # Smaller try for plate
+            plate = get_plate_type(lat, lon)
+        except Exception as e:
+            print(f"Plate fetch error: {e}")
+            plate = None
+        debug_info['plate_type'] = plate  # Always add
         debug_info['tectonic_plates_response'] = 'Loaded successfully' if PLATES_GEOJSON else 'Failed to load'
         if plate and ('subduction' in plate or 'convergent' in plate or 'andes' in plate or 'pacific' in plate or 'nazca' in plate):
             crust_type = "volcanic_subduction"
@@ -356,7 +365,6 @@ def get_offsets_from_location(location: str):
             prob_offsets['pyroxene'] = prob_offsets.get('pyroxene', 0) + 0.15
             prob_offsets['gold'] = prob_offsets.get('gold', 0) + 0.05
             prob_offsets['copper'] = prob_offsets.get('copper', 0) + 0.08
-
         # Mineral Deposits
         if use_mindat:
             if not MINDAT_API_KEY:
@@ -365,23 +373,26 @@ def get_offsets_from_location(location: str):
                 mindat_headers = {"Authorization": f"Token {MINDAT_API_KEY}"}
                 # Query localities in a box (±1 degree)
                 localities_url = f"https://api.mindat.org/localities/?lat__gte={lat-1}&lat__lte={lat+1}&lon__gte={lon-1}&lon__lte={lon+1}&limit=20"
-                resp = requests.get(localities_url, headers=mindat_headers, timeout=10)
-                if resp.ok:
-                    debug_info['mindat_localities_response'] = resp.json()
-                    localities = resp.json().get('results', [])
-                    for loc in localities:
-                        loc_id = loc['id']
-                        # Query minerals for this locality
-                        minerals_url = f"https://api.mindat.org/minerals/?locality={loc_id}"
-                        miner_resp = requests.get(minerals_url, headers=mindat_headers, timeout=10)
-                        if miner_resp.ok:
-                            minerals = miner_resp.json().get('results', [])
-                            for minr in minerals:
-                                name = minr.get('name', '').lower()
-                                if name:
-                                    minerals_counter[name] += 1  # Count occurrences
-                else:
-                    print(f"Mindat localities query failed: {resp.status_code}")
+                try:
+                    resp = requests.get(localities_url, headers=mindat_headers, timeout=10)
+                    if resp.ok:
+                        debug_info['mindat_localities_response'] = resp.json()
+                        localities = resp.json().get('results', [])
+                        for loc in localities:
+                            loc_id = loc['id']
+                            # Query minerals for this locality
+                            minerals_url = f"https://api.mindat.org/minerals/?locality={loc_id}"
+                            miner_resp = requests.get(minerals_url, headers=mindat_headers, timeout=10)
+                            if miner_resp.ok:
+                                minerals = miner_resp.json().get('results', [])
+                                for minr in minerals:
+                                    name = minr.get('name', '').lower()
+                                    if name:
+                                        minerals_counter[name] += 1  # Count occurrences
+                    else:
+                        print(f"Mindat localities query failed: {resp.status_code}")
+                except Exception as e:
+                    print(f"Mindat error: {e}")
         else:
             # Use MRDS (original)
             mrds_url = f"https://mrdata.usgs.gov/mrds/search-bbox.php?min_lat={lat-1}&max_lat={lat+1}&min_lon={lon-1}&max_lon={lon+1}&format=json"
@@ -389,19 +400,17 @@ def get_offsets_from_location(location: str):
                 resp = requests.get(mrds_url, timeout=8)
                 if resp.ok:
                     debug_info['mrds_response'] = resp.json()
-                    data = resp.json()
-                    for f in data.get('features', []):
+                    mrds_data = resp.json()
+                    for f in mrds_data.get('features', []):
                         dep_size = f['properties'].get('dep_size', 'M')
                         size_factor = {'L': 3, 'M': 2, 'S': 1}.get(dep_size.upper(), 1)
                         comm = f['properties'].get('commodity', '')
                         comms = [m.strip().lower() for m in comm.split(',') if m.strip()]
                         for c in comms:
                             minerals_counter[c] += size_factor
-            except:
-                pass
-
-        debug_info['minerals_counter'] = dict(minerals_counter)  # After processing
-
+            except Exception as e:
+                print(f"MRDS error: {e}")
+        debug_info['minerals_counter'] = dict(minerals_counter)  # Always add
         # Apply mineral boosts dynamically using minerals.json
         if minerals_counter:
             common = minerals_counter.most_common(8)
@@ -411,7 +420,7 @@ def get_offsets_from_location(location: str):
                 boost = 0.18 * (count / total_mentions)
                 matched = False
                 for target in mineral_keys:
-                    if name in target or target in name: # Simple string containment match
+                    if name in target or target in name:  # Simple string containment match
                         prob_offsets[target] = prob_offsets.get(target, 0) + boost
                         matched = True
                 # Optional: Fallback mappings for unmatched (minimal listing)
@@ -420,7 +429,7 @@ def get_offsets_from_location(location: str):
                         'platinum': 'gold',
                         'nickel': 'copper',
                         'uranium': 'iron_ore',
-                        'coal': 'mica' # Example for coal
+                        'coal': 'mica'  # Example for coal
                     }
                     if name in fallback_mapping:
                         target = fallback_mapping[name]
@@ -428,31 +437,83 @@ def get_offsets_from_location(location: str):
                             prob_offsets[target] = prob_offsets.get(target, 0) + boost
     except Exception as e:
         print(f"[Geology Engine] Fallback mode for {location}: {e}")
-
     # Final crust type decision (runs even if some APIs failed)
-    # If we have a strong basalt signal, we're probably on oceanic or volcanic crust
     if prob_offsets.get('basalt', 0) > 0.25:
         crust_type = "oceanic" if elevation < 0 else "volcanic"
     elif crust_type == "volcanic_subduction":
         # Keep the more specific subduction type if we detected it
         pass
-    return x_offset, y_offset, z_offset, crust_type, prob_offsets, debug_info
+    debug_info['crust_type'] = crust_type  # Added: Always include final crust_type
+    # Determine cover_variant based on location details using minerals.json
+    land_class = data.get('class', '') if data else ''
+    land_type = data.get('type', '') if data else ''
+    # extratags = data.get('extratags', {}) if data else {}
+    extratags = data.get('extratags') or {} if data else {}
+    location_data = {
+        'elevation': elevation,
+        'lat': lat if lat is not None else 0,
+        'natural': extratags.get('natural', land_type).lower(),
+        'landuse': extratags.get('landuse', '').lower(),
+        'crust_type': crust_type
+    }
+    # Function to compute match score
+    def match_variant(variant, loc_data):
+        conditions = variant.get('conditions', {})
+        score = 0
+        if 'elevation_min' in conditions and loc_data['elevation'] >= conditions['elevation_min']:
+            score += 1
+        if 'elevation_max' in conditions and loc_data['elevation'] <= conditions['elevation_max']:
+            score += 1
+        if 'requires_tropical' in conditions and conditions['requires_tropical'] and abs(loc_data['lat']) <= 30:
+            score += 2
+        if 'requires_cold' in conditions and conditions['requires_cold'] and (abs(loc_data['lat']) >= 50 or loc_data['elevation'] >= 2000):
+            score += 2
+        if 'natural' in conditions and loc_data['natural'] in [n.lower() for n in conditions['natural']]:
+            score += 2
+        if 'landuse' in conditions and loc_data['landuse'] in [l.lower() for l in conditions['landuse']]:
+            score += 2
+        if 'crust_types' in conditions and loc_data['crust_type'] in conditions['crust_types']:
+            score += 2
+        return score
+    # Find best variant
+    best_variant = "clayey_mudflat"  # Default
+    max_score = -1
+    for variant in minerals_data['coverVariants']:
+        score = match_variant(variant, location_data)
+        if score > max_score:
+            max_score = score
+            best_variant = variant['id']
+    cover_variant = best_variant
+    # Add to debug_info
+    debug_info['land_class'] = land_class
+    debug_info['land_type'] = land_type
+    debug_info['extratags'] = extratags
+    debug_info['cover_variant'] = cover_variant
+    return x_offset, y_offset, z_offset, crust_type, prob_offsets, cover_variant, debug_info
+
+
+
+
+
+
 @app.route('/api/offsets', methods=['GET'])
 def api_get_offsets():
     location = request.args.get('location', '').strip()
     if not location:
         return jsonify({'error': 'Missing location parameter'}), 400
-    x_offset, y_offset, z_offset, crust_type, prob_offsets, debug_info = get_offsets_from_location(location)
+    x_offset, y_offset, z_offset, crust_type, prob_offsets, cover_variant, debug_info = get_offsets_from_location(location)
     response = {
         'x_offset': x_offset,
         'y_offset': y_offset,
         'z_offset': z_offset,
         'crust_type': crust_type,
-        'prob_offsets': prob_offsets
+        'prob_offsets': prob_offsets,
+        'cover_variant': cover_variant
     }
     if request.args.get('debug', 'false').lower() == 'true':
         response['debug_info'] = debug_info
     return jsonify(response)
+    
 @app.route('/api/mineral', methods=['GET'])
 def api_get_mineral():
     try:
